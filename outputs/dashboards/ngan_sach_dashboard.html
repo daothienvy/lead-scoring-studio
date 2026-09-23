@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Quản Lý Ngân Sách — Beta Solutions 2026</title>
+  <meta name="description" content="Dashboard Quản lý Ngân sách nội bộ Beta Solutions năm 2026. Theo dõi KPI ngân sách, chi tiêu và giao dịch vượt ngân sách theo thời gian thực." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --brand-budget:  #7C3AED;
+      --brand-expense: #06B6D4;
+      --brand-over:    #F43F5E;
+      --budget-glow:   rgba(124,58,237,0.32);
+      --expense-glow:  rgba(6,182,212,0.32);
+      --over-glow:     rgba(244,63,94,0.32);
+      --bg-card:       rgba(15,23,42,0.72);
+      --border-glass:  rgba(255,255,255,0.08);
+      --border-hover:  rgba(255,255,255,0.20);
+      --text-main:     #f8fafc;
+      --text-sub:      #94a3b8;
+      --text-muted:    #64748b;
+      --radius-lg:     18px;
+      --radius-md:     12px;
+      --radius-sm:     8px;
+      --tr: all 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{
+      font-family:'Plus Jakarta Sans',sans-serif;
+      background:radial-gradient(ellipse 120% 80% at 15% 10%,#150d2e 0%,#05070f 50%,#020507 100%);
+      color:var(--text-main);min-height:100vh;padding:20px;overflow-x:hidden;
+    }
+    body::before{content:'';position:fixed;top:-150px;left:-150px;width:500px;height:500px;
+      background:radial-gradient(circle,rgba(124,58,237,0.09) 0%,transparent 70%);
+      pointer-events:none;z-index:0;}
+    body::after{content:'';position:fixed;bottom:-150px;right:-150px;width:600px;height:600px;
+      background:radial-gradient(circle,rgba(6,182,212,0.07) 0%,transparent 70%);
+      pointer-events:none;z-index:0;}
+    .wrap{position:relative;z-index:1;max-width:1600px;margin:0 auto}
+    .glass{background:var(--bg-card);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+      border:1px solid var(--border-glass);border-radius:var(--radius-lg);
+      box-shadow:0 8px 32px rgba(0,0,0,0.4),inset 0 0 0 1px rgba(255,255,255,0.04);
+      transition:var(--tr);}
+    .glass:hover{border-color:var(--border-hover);box-shadow:0 16px 48px rgba(0,0,0,0.5),inset 0 0 0 1px rgba(255,255,255,0.07);}
+
+    /* HEADER */
+    .header{display:flex;align-items:center;justify-content:space-between;padding:18px 26px;margin-bottom:20px;flex-wrap:wrap;gap:14px}
+    .h-left{display:flex;align-items:center;gap:14px}
+    .logo{width:48px;height:48px;border-radius:12px;
+      background:linear-gradient(135deg,var(--brand-budget),#5b21b6);
+      display:flex;align-items:center;justify-content:center;font-size:22px;
+      box-shadow:0 0 20px var(--budget-glow);flex-shrink:0}
+    .logo-text h1{font-size:1.15rem;font-weight:800;letter-spacing:-0.02em;line-height:1.2}
+    .logo-text p{font-size:0.75rem;color:var(--text-sub);margin-top:2px}
+    .h-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .live-badge{display:flex;align-items:center;gap:7px;padding:6px 14px;
+      background:rgba(244,63,94,0.12);border:1px solid rgba(244,63,94,0.3);
+      border-radius:20px;font-size:0.74rem;font-weight:700;color:var(--brand-over)}
+    .live-dot{width:7px;height:7px;background:var(--brand-over);border-radius:50%;
+      animation:pulse 1.5s ease-in-out infinite}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(1.5)}}
+    .ts-label{font-size:0.72rem;color:var(--text-muted)}
+    .btn-export{display:flex;align-items:center;gap:8px;padding:10px 20px;
+      background:linear-gradient(135deg,var(--brand-budget),#5b21b6);
+      border:none;border-radius:var(--radius-md);color:#fff;font-family:inherit;
+      font-size:0.82rem;font-weight:700;cursor:pointer;transition:var(--tr);
+      box-shadow:0 4px 16px var(--budget-glow);letter-spacing:0.01em}
+    .btn-export:hover{transform:translateY(-2px);box-shadow:0 8px 24px var(--budget-glow);
+      background:linear-gradient(135deg,#8b5cf6,var(--brand-budget))}
+    .btn-export:active{transform:translateY(0)}
+
+    /* FILTER BAR */
+    .filter-bar{padding:14px 22px;margin-bottom:20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+    .f-label{font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;white-space:nowrap}
+    .f-divider{width:1px;height:30px;background:var(--border-glass);margin:0 2px}
+    .q-btns{display:flex;gap:6px}
+    .btn-q{padding:7px 16px;background:transparent;border:1px solid var(--border-glass);
+      border-radius:var(--radius-sm);color:var(--text-sub);font-family:inherit;
+      font-size:0.82rem;font-weight:600;cursor:pointer;transition:var(--tr)}
+    .btn-q:hover{border-color:var(--brand-budget);color:var(--text-main);background:rgba(124,58,237,0.1)}
+    .btn-q.active{background:rgba(124,58,237,0.22);border-color:var(--brand-budget);
+      color:#c4b5fd;box-shadow:0 0 12px rgba(124,58,237,0.25)}
+    .dept-sel{padding:8px 14px;background:rgba(15,23,42,0.8);border:1px solid var(--border-glass);
+      border-radius:var(--radius-sm);color:var(--text-main);font-family:inherit;font-size:0.82rem;
+      font-weight:500;cursor:pointer;outline:none;transition:var(--tr);min-width:200px}
+    .dept-sel:hover,.dept-sel:focus{border-color:var(--brand-expense);box-shadow:0 0 0 2px rgba(6,182,212,0.15)}
+    .dept-sel option{background:#1e293b;color:var(--text-main)}
+
+    /* KPI GRID */
+    .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:20px}
+    @media(max-width:900px){.kpi-grid{grid-template-columns:1fr}}
+    .kpi-card{padding:22px 24px;display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden;cursor:default}
+    .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+    .kpi-budget::before{background:linear-gradient(90deg,var(--brand-budget),transparent)}
+    .kpi-expense::before{background:linear-gradient(90deg,var(--brand-expense),transparent)}
+    .kpi-over::before{background:linear-gradient(90deg,var(--brand-over),transparent)}
+    .kpi-top{display:flex;justify-content:space-between;align-items:flex-start}
+    .kpi-lbl{font-size:0.72rem;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.07em}
+    .kpi-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+    .kpi-budget .kpi-icon{background:rgba(124,58,237,0.15);box-shadow:0 0 16px rgba(124,58,237,0.25)}
+    .kpi-expense .kpi-icon{background:rgba(6,182,212,0.15);box-shadow:0 0 16px rgba(6,182,212,0.25)}
+    .kpi-over .kpi-icon{background:rgba(244,63,94,0.15);box-shadow:0 0 16px rgba(244,63,94,0.25)}
+    .kpi-val{font-size:2.15rem;font-weight:800;letter-spacing:-0.03em;line-height:1}
+    .kpi-budget .kpi-val{color:#c4b5fd}
+    .kpi-expense .kpi-val{color:#67e8f9}
+    .kpi-over .kpi-val{color:#fda4af}
+    .kpi-unit{font-size:0.73rem;color:var(--text-muted);margin-top:4px}
+    .kpi-foot{display:flex;align-items:center;justify-content:space-between;padding-top:12px;border-top:1px solid var(--border-glass)}
+    .kpi-sub{font-size:0.73rem;color:var(--text-muted)}
+    .tbadge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:0.7rem;font-weight:700}
+    .tb-budget{background:rgba(124,58,237,0.15);color:#c4b5fd;border:1px solid rgba(124,58,237,0.3)}
+    .tb-expense{background:rgba(6,182,212,0.15);color:#67e8f9;border:1px solid rgba(6,182,212,0.3)}
+    .tb-over{background:rgba(244,63,94,0.15);color:#fda4af;border:1px solid rgba(244,63,94,0.3)}
+
+    /* CHARTS */
+    .charts-row{display:grid;grid-template-columns:1.7fr 1fr;gap:18px;margin-bottom:20px}
+    @media(max-width:1100px){.charts-row{grid-template-columns:1fr}}
+    .chart-card{padding:22px 24px}
+    .chart-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+    .chart-ttl{font-size:0.92rem;font-weight:700;color:var(--text-main)}
+    .chart-sub{font-size:0.72rem;color:var(--text-muted);margin-top:3px}
+    .legend{display:flex;gap:14px;flex-wrap:wrap}
+    .leg-item{display:flex;align-items:center;gap:6px;font-size:0.72rem;color:var(--text-sub);font-weight:500}
+    .leg-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+    .ch-wrap{position:relative;width:100%}
+    .bar-h{height:300px}
+    .pie-h{height:280px}
+
+    /* TABLE */
+    .tbl-card{padding:22px 24px;margin-bottom:20px}
+    .tbl-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+    .badge-cnt{padding:4px 12px;background:rgba(244,63,94,0.12);border:1px solid rgba(244,63,94,0.25);
+      border-radius:20px;font-size:0.71rem;font-weight:700;color:var(--brand-over)}
+    .tbl-wrap{overflow-x:auto;border-radius:var(--radius-md)}
+    table{width:100%;border-collapse:collapse;font-size:0.8rem}
+    thead tr{background:rgba(255,255,255,0.03)}
+    th{padding:11px 14px;text-align:left;font-size:0.68rem;font-weight:700;color:var(--text-muted);
+      text-transform:uppercase;letter-spacing:0.07em;border-bottom:1px solid var(--border-glass);white-space:nowrap}
+    td{padding:11px 14px;color:var(--text-sub);border-bottom:1px solid rgba(255,255,255,0.03);white-space:nowrap}
+    tbody tr{transition:background 0.2s}
+    tbody tr:hover{background:rgba(255,255,255,0.04)}
+    tbody tr:last-child td{border-bottom:none}
+    .td-code{color:var(--text-muted);font-size:0.7rem;font-family:'Courier New',monospace}
+    .td-budget{color:#c4b5fd;font-weight:600}
+    .td-exp{color:#67e8f9;font-weight:600}
+    .td-over{color:#fda4af;font-weight:700}
+    .td-dept{color:var(--text-sub);font-weight:500;max-width:100px}
+    .td-muc{color:var(--text-main);max-width:200px;overflow:hidden;text-overflow:ellipsis}
+    .sbadge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:0.68rem;font-weight:700}
+    .s-over{background:rgba(244,63,94,0.15);color:#fda4af;border:1px solid rgba(244,63,94,0.3)}
+
+    /* FOOTER */
+    .footer{text-align:center;padding:14px;font-size:0.71rem;color:var(--text-muted)}
+    .footer span{color:var(--brand-budget);font-weight:700}
+
+    /* LOADING */
+    .loading-ov{position:fixed;inset:0;background:#05070f;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:20px;z-index:9999;transition:opacity 0.5s,visibility 0.5s}
+    .loading-ov.hide{opacity:0;visibility:hidden;pointer-events:none}
+    .ld-logo{width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,var(--brand-budget),#5b21b6);
+      display:flex;align-items:center;justify-content:center;font-size:28px;
+      animation:float 2s ease-in-out infinite;box-shadow:0 0 32px var(--budget-glow)}
+    @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+    .ld-txt{font-size:0.85rem;color:var(--text-sub)}
+    .ld-bar{width:200px;height:3px;background:var(--border-glass);border-radius:2px;overflow:hidden}
+    .ld-bar-in{height:100%;background:linear-gradient(90deg,var(--brand-budget),var(--brand-expense));
+      border-radius:2px;animation:ldbar 1.4s ease-in-out infinite}
+    @keyframes ldbar{0%{width:0%;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0%;margin-left:100%}}
+
+    ::-webkit-scrollbar{width:5px;height:5px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+    ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.2)}
+  </style>
+</head>
+<body>
+
+<!-- Loading -->
+<div class="loading-ov" id="ldOv">
+  <div class="ld-logo">💜</div>
+  <div class="ld-txt">Đang khởi tạo Dashboard...</div>
+  <div class="ld-bar"><div class="ld-bar-in"></div></div>
+</div>
+
+<div class="wrap">
+
+  <!-- HEADER -->
+  <header class="glass header">
+    <div class="h-left">
+      <div class="logo">💜</div>
+      <div class="logo-text">
+        <h1>Beta Solutions — Dashboard Ngân Sách 2026</h1>
+        <p>Trưởng phòng Tài chính &amp; Fullstack Developer · Dữ liệu ERP nội bộ</p>
+      </div>
+    </div>
+    <div class="h-right">
+      <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+      <div class="ts-label" id="tsLabel">Khởi tạo...</div>
+      <button class="btn-export" id="btnExp" onclick="doExport()">⬇ Xuất Báo Cáo Tĩnh</button>
+    </div>
+  </header>
+
+  <!-- FILTER BAR -->
+  <div class="glass filter-bar">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="f-label">Lọc Quý</span>
+      <div class="q-btns">
+        <button class="btn-q active" data-q="ALL" id="qALL" onclick="setQ('ALL')">Tất cả</button>
+        <button class="btn-q" data-q="Q1"  id="qQ1"  onclick="setQ('Q1')">Q1</button>
+        <button class="btn-q" data-q="Q2"  id="qQ2"  onclick="setQ('Q2')">Q2</button>
+        <button class="btn-q" data-q="Q3"  id="qQ3"  onclick="setQ('Q3')">Q3</button>
+        <button class="btn-q" data-q="Q4"  id="qQ4"  onclick="setQ('Q4')">Q4</button>
+      </div>
+    </div>
+    <div class="f-divider"></div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="f-label">Phòng Ban</span>
+      <select class="dept-sel" id="deptSel" onchange="setD(this.value)">
+        <option value="ALL">— Tất cả phòng ban —</option>
+        <option value="Công nghệ thông tin (IT)">Công nghệ thông tin (IT)</option>
+        <option value="Marketing &amp; Truyền thông">Marketing &amp; Truyền thông</option>
+        <option value="Kinh doanh (Sales)">Kinh doanh (Sales)</option>
+        <option value="Nhân sự &amp; Đào tạo (HR)">Nhân sự &amp; Đào tạo (HR)</option>
+        <option value="Tài chính - Kế toán">Tài chính - Kế toán</option>
+        <option value="Nghiên cứu &amp; Phát triển (R&amp;D)">Nghiên cứu &amp; Phát triển (R&amp;D)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid">
+    <div class="glass kpi-card kpi-budget">
+      <div class="kpi-top">
+        <div><div class="kpi-lbl">Tổng Ngân Sách Dự Kiến</div></div>
+        <div class="kpi-icon">💜</div>
+      </div>
+      <div>
+        <div class="kpi-val" id="kBudget">—</div>
+        <div class="kpi-unit">Tỷ VNĐ</div>
+      </div>
+      <div class="kpi-foot">
+        <span class="kpi-sub" id="kBudgetSub">— giao dịch</span>
+        <span class="tbadge tb-budget">💜 Ngân sách</span>
+      </div>
+    </div>
+    <div class="glass kpi-card kpi-expense">
+      <div class="kpi-top">
+        <div><div class="kpi-lbl">Tổng Chi Tiêu Thực Tế</div></div>
+        <div class="kpi-icon">🩵</div>
+      </div>
+      <div>
+        <div class="kpi-val" id="kExpense">—</div>
+        <div class="kpi-unit">Tỷ VNĐ</div>
+      </div>
+      <div class="kpi-foot">
+        <span class="kpi-sub" id="kExpPct">—% so với NS</span>
+        <span class="tbadge tb-expense">🩵 Chi tiêu</span>
+      </div>
+    </div>
+    <div class="glass kpi-card kpi-over">
+      <div class="kpi-top">
+        <div><div class="kpi-lbl">Giao Dịch Vượt Ngân Sách</div></div>
+        <div class="kpi-icon">🚨</div>
+      </div>
+      <div>
+        <div class="kpi-val" id="kOver">—</div>
+        <div class="kpi-unit">giao dịch</div>
+      </div>
+      <div class="kpi-foot">
+        <span class="kpi-sub" id="kOverPct">—% tổng GD</span>
+        <span class="tbadge tb-over">⚠ Vượt NS</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="charts-row">
+    <div class="glass chart-card">
+      <div class="chart-hdr">
+        <div>
+          <div class="chart-ttl">Ngân Sách vs Chi Tiêu theo Phòng Ban</div>
+          <div class="chart-sub">So sánh ngân sách dự kiến và chi tiêu thực tế (Triệu VNĐ)</div>
+        </div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-dot" style="background:#7C3AED"></div>Ngân sách</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#06B6D4"></div>Chi tiêu</div>
+        </div>
+      </div>
+      <div class="ch-wrap bar-h"><canvas id="barChart"></canvas></div>
+    </div>
+    <div class="glass chart-card">
+      <div class="chart-hdr">
+        <div>
+          <div class="chart-ttl">Tỷ Trọng Chi Tiêu</div>
+          <div class="chart-sub">Phân bổ theo phòng ban (%)</div>
+        </div>
+      </div>
+      <div class="ch-wrap pie-h"><canvas id="donutChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="glass tbl-card">
+    <div class="tbl-hdr">
+      <div>
+        <div class="chart-ttl">🚨 Giao Dịch Vượt Ngân Sách</div>
+        <div class="chart-sub">Danh sách chi tiết — sắp xếp theo mức vượt cao nhất</div>
+      </div>
+      <span class="badge-cnt" id="overBadge">—</span>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Mã GD</th><th>Ngày</th><th>Quý</th><th>Phòng Ban</th><th>Hạng Mục</th>
+          <th>NS (Tr.đ)</th><th>CT (Tr.đ)</th><th>Vượt (Tr.đ)</th><th>% SD</th><th>Trạng Thái</th>
+        </tr></thead>
+        <tbody id="tblBody"><tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text-muted)">Đang tải...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <span>Beta Solutions</span> · Dashboard Quản Lý Ngân Sách 2026 · Built by <span>Trưởng phòng Tài chính</span>
+  </footer>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// DATA — Toàn bộ 96 dòng từ ngan_sach_phong_ban.xlsx
+// ═══════════════════════════════════════════════════════
+const RAW_DATA = [{"Ma_Giao_Dich":"TX-2026-0001","Ngay":"2026-01-29","Quy":"Q1","Phong_Ban":"Công nghệ thông tin (IT)","Hang_Muc":"Hạ tầng Cloud AWS/GCP","Ngan_Sach_Du_Kien":200000000,"Chi_Tieu_Thuc_Te":232002345,"Chenh_Lech":-32002345,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":116},{"Ma_Giao_Dich":"TX-2026-0002","Ngay":"2026-03-11","Quy":"Q1","Phong_Ban":"Công nghệ thông tin (IT)","Hang_Muc":"Bản quyền phần mềm AI & Dev","Ngan_Sach_Du_Kien":230000000,"Chi_Tieu_Thuc_Te":204579446,"Chenh_Lech":25420554,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":88.9},{"Ma_Giao_Dich":"TX-2026-0003","Ngay":"2026-01-12","Quy":"Q1","Phong_Ban":"Công nghệ thông tin (IT)","Hang_Muc":"Nâng cấp hệ thống máy chủ","Ngan_Sach_Du_Kien":170000000,"Chi_Tieu_Thuc_Te":120512855,"Chenh_Lech":49487145,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":70.9},{"Ma_Giao_Dich":"TX-2026-0004","Ngay":"2026-03-13","Quy":"Q1","Phong_Ban":"Công nghệ thông tin (IT)","Hang_Muc":"An toàn thông tin & Bảo mật","Ngan_Sach_Du_Kien":330000000,"Chi_Tieu_Thuc_Te":425966472,"Chenh_Lech":-95966472,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":129.1},{"Ma_Giao_Dich":"TX-2026-0005","Ngay":"2026-02-23","Quy":"Q1","Phong_Ban":"Marketing & Truyền thông","Hang_Muc":"Chiến dịch Quảng cáo Meta & Google","Ngan_Sach_Du_Kien":310000000,"Chi_Tieu_Thuc_Te":277875007,"Chenh_Lech":32124993,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":89.6},{"Ma_Giao_Dich":"TX-2026-0006","Ngay":"2026-01-01","Quy":"Q1","Phong_Ban":"Marketing & Truyền thông","Hang_Muc":"Sự kiện ra mắt sản phẩm mới","Ngan_Sach_Du_Kien":340000000,"Chi_Tieu_Thuc_Te":264483755,"Chenh_Lech":75516245,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":77.8},{"Ma_Giao_Dich":"TX-2026-0007","Ngay":"2026-01-20","Quy":"Q1","Phong_Ban":"Marketing & Truyền thông","Hang_Muc":"Thuê KOLs và Media Agency","Ngan_Sach_Du_Kien":260000000,"Chi_Tieu_Thuc_Te":206770237,"Chenh_Lech":53229763,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":79.5},{"Ma_Giao_Dich":"TX-2026-0008","Ngay":"2026-01-12","Quy":"Q1","Phong_Ban":"Marketing & Truyền thông","Hang_Muc":"Sản xuất Video & Brand Awareness","Ngan_Sach_Du_Kien":330000000,"Chi_Tieu_Thuc_Te":262101335,"Chenh_Lech":67898665,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":79.4},{"Ma_Giao_Dich":"TX-2026-0009","Ngay":"2026-03-19","Quy":"Q1","Phong_Ban":"Kinh doanh (Sales)","Hang_Muc":"Chi phí tiếp khách & đàm phán hợp đồng","Ngan_Sach_Du_Kien":540000000,"Chi_Tieu_Thuc_Te":750058783,"Chenh_Lech":-210058783,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":138.9},{"Ma_Giao_Dich":"TX-2026-0010","Ngay":"2026-03-10","Quy":"Q1","Phong_Ban":"Kinh doanh (Sales)","Hang_Muc":"Công tác phí thị trường miền Nam & Trung","Ngan_Sach_Du_Kien":390000000,"Chi_Tieu_Thuc_Te":352686711,"Chenh_Lech":37313289,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":90.4},{"Ma_Giao_Dich":"TX-2026-0011","Ngay":"2026-03-12","Quy":"Q1","Phong_Ban":"Kinh doanh (Sales)","Hang_Muc":"Thưởng hoa hồng mở rộng đại lý","Ngan_Sach_Du_Kien":210000000,"Chi_Tieu_Thuc_Te":169257821,"Chenh_Lech":40742179,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":80.6},{"Ma_Giao_Dich":"TX-2026-0012","Ngay":"2026-02-16","Quy":"Q1","Phong_Ban":"Kinh doanh (Sales)","Hang_Muc":"Tham gia triển lãm B2B Quốc tế","Ngan_Sach_Du_Kien":430000000,"Chi_Tieu_Thuc_Te":375469778,"Chenh_Lech":54530222,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":87.3},{"Ma_Giao_Dich":"TX-2026-0013","Ngay":"2026-03-26","Quy":"Q1","Phong_Ban":"Nhân sự & Đào tạo (HR)","Hang_Muc":"Tuyển dụng Kỹ sư AI & Quản lý cấp cao","Ngan_Sach_Du_Kien":790000000,"Chi_Tieu_Thuc_Te":851479427,"Chenh_Lech":-61479427,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":107.8},{"Ma_Giao_Dich":"TX-2026-0014","Ngay":"2026-01-30","Quy":"Q1","Phong_Ban":"Nhân sự & Đào tạo (HR)","Hang_Muc":"Chương trình đào tạo kỹ năng Clear AI","Ngan_Sach_Du_Kien":350000000,"Chi_Tieu_Thuc_Te":341551709,"Chenh_Lech":8448291,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":97.6},{"Ma_Giao_Dich":"TX-2026-0015","Ngay":"2026-02-16","Quy":"Q1","Phong_Ban":"Nhân sự & Đào tạo (HR)","Hang_Muc":"Teambuilding & Văn hóa doanh nghiệp","Ngan_Sach_Du_Kien":180000000,"Chi_Tieu_Thuc_Te":148851879,"Chenh_Lech":31148121,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":82.7},{"Ma_Giao_Dich":"TX-2026-0016","Ngay":"2026-02-04","Quy":"Q1","Phong_Ban":"Nhân sự & Đào tạo (HR)","Hang_Muc":"Khám sức khỏe định kỳ & Bảo hiểm","Ngan_Sach_Du_Kien":260000000,"Chi_Tieu_Thuc_Te":197252111,"Chenh_Lech":62747889,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":75.9},{"Ma_Giao_Dich":"TX-2026-0017","Ngay":"2026-02-01","Quy":"Q1","Phong_Ban":"Tài chính - Kế toán","Hang_Muc":"Kiểm toán độc lập báo cáo năm","Ngan_Sach_Du_Kien":150000000,"Chi_Tieu_Thuc_Te":112187823,"Chenh_Lech":37812177,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":74.8},{"Ma_Giao_Dich":"TX-2026-0018","Ngay":"2026-03-23","Quy":"Q1","Phong_Ban":"Tài chính - Kế toán","Hang_Muc":"Phí bản quyền phần mềm ERP Fast","Ngan_Sach_Du_Kien":260000000,"Chi_Tieu_Thuc_Te":201652201,"Chenh_Lech":58347799,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":77.6},{"Ma_Giao_Dich":"TX-2026-0019","Ngay":"2026-01-08","Quy":"Q1","Phong_Ban":"Tài chính - Kế toán","Hang_Muc":"Tư vấn luật & Thuế doanh nghiệp","Ngan_Sach_Du_Kien":770000000,"Chi_Tieu_Thuc_Te":908379082,"Chenh_Lech":-138379082,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":118},{"Ma_Giao_Dich":"TX-2026-0020","Ngay":"2026-02-21","Quy":"Q1","Phong_Ban":"Tài chính - Kế toán","Hang_Muc":"Chi phí giao dịch ngân hàng & POS","Ngan_Sach_Du_Kien":350000000,"Chi_Tieu_Thuc_Te":323894488,"Chenh_Lech":26105512,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":92.5},{"Ma_Giao_Dich":"TX-2026-0021","Ngay":"2026-03-14","Quy":"Q1","Phong_Ban":"Nghiên cứu & Phát triển (R&D)","Hang_Muc":"Nghiên cứu Fine-tuning mô hình AI","Ngan_Sach_Du_Kien":400000000,"Chi_Tieu_Thuc_Te":566101779,"Chenh_Lech":-166101779,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":141.5},{"Ma_Giao_Dich":"TX-2026-0022","Ngay":"2026-03-24","Quy":"Q1","Phong_Ban":"Nghiên cứu & Phát triển (R&D)","Hang_Muc":"Mua sắm thiết bị GPU phục vụ Training","Ngan_Sach_Du_Kien":460000000,"Chi_Tieu_Thuc_Te":574858551,"Chenh_Lech":-114858551,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":125},{"Ma_Giao_Dich":"TX-2026-0023","Ngay":"2026-03-13","Quy":"Q1","Phong_Ban":"Nghiên cứu & Phát triển (R&D)","Hang_Muc":"Đăng ký sáng chế & sở hữu trí tuệ","Ngan_Sach_Du_Kien":640000000,"Chi_Tieu_Thuc_Te":707745361,"Chenh_Lech":-67745361,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":110.6},{"Ma_Giao_Dich":"TX-2026-0024","Ngay":"2026-03-16","Quy":"Q1","Phong_Ban":"Nghiên cứu & Phát triển (R&D)","Hang_Muc":"Thuê chuyên gia cố vấn công nghệ","Ngan_Sach_Du_Kien":740000000,"Chi_Tieu_Thuc_Te":639126217,"Chenh_Lech":100873783,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":86.4},{"Ma_Giao_Dich":"TX-2026-0025","Ngay":"2026-04-18","Quy":"Q2","Phong_Ban":"Công nghệ thông tin (IT)","Hang_Muc":"Hạ tầng Cloud AWS/GCP","Ngan_Sach_Du_Kien":570000000,"Chi_Tieu_Thuc_Te":558173194,"Chenh_Lech":11826806,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":97.9},{"Ma_Giao_Dich":"TX-2026-0026","Ngay":"2026-04-15","Quy":"Q2","Phong_Ban":"Công nghệ thông tin (IT)","Hang_Muc":"Bản quyền phần mềm AI & Dev","Ngan_Sach_Du_Kien":710000000,"Chi_Tieu_Thuc_Te":647249492,"Chenh_Lech":62750508,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":91.2},{"Ma_Giao_Dich":"TX-2026-0027","Ngay":"2026-05-25","Quy":"Q2","Phong_Ban":"Công nghệ thông tin (IT)","Hang_Muc":"Nâng cấp hệ thống máy chủ","Ngan_Sach_Du_Kien":250000000,"Chi_Tieu_Thuc_Te":230445555,"Chenh_Lech":19554445,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":92.2},{"Ma_Giao_Dich":"TX-2026-0028","Ngay":"2026-05-30","Quy":"Q2","Phong_Ban":"Công nghệ thông tin (IT)","Hang_Muc":"An toàn thông tin & Bảo mật","Ngan_Sach_Du_Kien":820000000,"Chi_Tieu_Thuc_Te":986171125,"Chenh_Lech":-166171125,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":120.3},{"Ma_Giao_Dich":"TX-2026-0029","Ngay":"2026-04-02","Quy":"Q2","Phong_Ban":"Marketing & Truyền thông","Hang_Muc":"Chiến dịch Quảng cáo Meta & Google","Ngan_Sach_Du_Kien":730000000,"Chi_Tieu_Thuc_Te":624079373,"Chenh_Lech":105920627,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":85.5},{"Ma_Giao_Dich":"TX-2026-0030","Ngay":"2026-05-05","Quy":"Q2","Phong_Ban":"Marketing & Truyền thông","Hang_Muc":"Sự kiện ra mắt sản phẩm mới","Ngan_Sach_Du_Kien":200000000,"Chi_Tieu_Thuc_Te":170070338,"Chenh_Lech":29929662,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":85},{"Ma_Giao_Dich":"TX-2026-0031","Ngay":"2026-05-29","Quy":"Q2","Phong_Ban":"Marketing & Truyền thông","Hang_Muc":"Thuê KOLs và Media Agency","Ngan_Sach_Du_Kien":490000000,"Chi_Tieu_Thuc_Te":599713989,"Chenh_Lech":-109713989,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":122.4},{"Ma_Giao_Dich":"TX-2026-0032","Ngay":"2026-05-04","Quy":"Q2","Phong_Ban":"Marketing & Truyền thông","Hang_Muc":"Sản xuất Video & Brand Awareness","Ngan_Sach_Du_Kien":60000000,"Chi_Tieu_Thuc_Te":56714329,"Chenh_Lech":3285671,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":94.5},{"Ma_Giao_Dich":"TX-2026-0033","Ngay":"2026-04-14","Quy":"Q2","Phong_Ban":"Kinh doanh (Sales)","Hang_Muc":"Chi phí tiếp khách & đàm phán hợp đồng","Ngan_Sach_Du_Kien":700000000,"Chi_Tieu_Thuc_Te":589505608,"Chenh_Lech":110494392,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":84.2},{"Ma_Giao_Dich":"TX-2026-0034","Ngay":"2026-04-26","Quy":"Q2","Phong_Ban":"Kinh doanh (Sales)","Hang_Muc":"Công tác phí thị trường miền Nam & Trung","Ngan_Sach_Du_Kien":440000000,"Chi_Tieu_Thuc_Te":370544067,"Chenh_Lech":69455933,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":84.2},{"Ma_Giao_Dich":"TX-2026-0035","Ngay":"2026-06-07","Quy":"Q2","Phong_Ban":"Kinh doanh (Sales)","Hang_Muc":"Thưởng hoa hồng mở rộng đại lý","Ngan_Sach_Du_Kien":250000000,"Chi_Tieu_Thuc_Te":186308432,"Chenh_Lech":63691568,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":74.5},{"Ma_Giao_Dich":"TX-2026-0036","Ngay":"2026-04-15","Quy":"Q2","Phong_Ban":"Kinh doanh (Sales)","Hang_Muc":"Tham gia triển lãm B2B Quốc tế","Ngan_Sach_Du_Kien":60000000,"Chi_Tieu_Thuc_Te":50208575,"Chenh_Lech":9791425,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":83.7},{"Ma_Giao_Dich":"TX-2026-0037","Ngay":"2026-05-10","Quy":"Q2","Phong_Ban":"Nhân sự & Đào tạo (HR)","Hang_Muc":"Tuyển dụng Kỹ sư AI & Quản lý cấp cao","Ngan_Sach_Du_Kien":520000000,"Chi_Tieu_Thuc_Te":485090501,"Chenh_Lech":34909499,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":93.3},{"Ma_Giao_Dich":"TX-2026-0038","Ngay":"2026-04-11","Quy":"Q2","Phong_Ban":"Nhân sự & Đào tạo (HR)","Hang_Muc":"Chương trình đào tạo kỹ năng Clear AI","Ngan_Sach_Du_Kien":360000000,"Chi_Tieu_Thuc_Te":504433382,"Chenh_Lech":-144433382,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":140.1},{"Ma_Giao_Dich":"TX-2026-0039","Ngay":"2026-06-08","Quy":"Q2","Phong_Ban":"Nhân sự & Đào tạo (HR)","Hang_Muc":"Teambuilding & Văn hóa doanh nghiệp","Ngan_Sach_Du_Kien":160000000,"Chi_Tieu_Thuc_Te":148557841,"Chenh_Lech":11442159,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":92.8},{"Ma_Giao_Dich":"TX-2026-0040","Ngay":"2026-06-10","Quy":"Q2","Phong_Ban":"Nhân sự & Đào tạo (HR)","Hang_Muc":"Khám sức khỏe định kỳ & Bảo hiểm","Ngan_Sach_Du_Kien":220000000,"Chi_Tieu_Thuc_Te":272824849,"Chenh_Lech":-52824849,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":124},{"Ma_Giao_Dich":"TX-2026-0041","Ngay":"2026-05-25","Quy":"Q2","Phong_Ban":"Tài chính - Kế toán","Hang_Muc":"Kiểm toán độc lập báo cáo năm","Ngan_Sach_Du_Kien":270000000,"Chi_Tieu_Thuc_Te":254955937,"Chenh_Lech":15044063,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":94.4},{"Ma_Giao_Dich":"TX-2026-0042","Ngay":"2026-06-28","Quy":"Q2","Phong_Ban":"Tài chính - Kế toán","Hang_Muc":"Phí bản quyền phần mềm ERP Fast","Ngan_Sach_Du_Kien":330000000,"Chi_Tieu_Thuc_Te":300786504,"Chenh_Lech":29213496,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":91.1},{"Ma_Giao_Dich":"TX-2026-0043","Ngay":"2026-06-25","Quy":"Q2","Phong_Ban":"Tài chính - Kế toán","Hang_Muc":"Tư vấn luật & Thuế doanh nghiệp","Ngan_Sach_Du_Kien":310000000,"Chi_Tieu_Thuc_Te":251632531,"Chenh_Lech":58367469,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":81.2},{"Ma_Giao_Dich":"TX-2026-0044","Ngay":"2026-04-16","Quy":"Q2","Phong_Ban":"Tài chính - Kế toán","Hang_Muc":"Chi phí giao dịch ngân hàng & POS","Ngan_Sach_Du_Kien":530000000,"Chi_Tieu_Thuc_Te":447808254,"Chenh_Lech":82191746,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":84.5},{"Ma_Giao_Dich":"TX-2026-0045","Ngay":"2026-06-15","Quy":"Q2","Phong_Ban":"Nghiên cứu & Phát triển (R&D)","Hang_Muc":"Nghiên cứu Fine-tuning mô hình AI","Ngan_Sach_Du_Kien":370000000,"Chi_Tieu_Thuc_Te":438536663,"Chenh_Lech":-68536663,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":118.5},{"Ma_Giao_Dich":"TX-2026-0046","Ngay":"2026-04-10","Quy":"Q2","Phong_Ban":"Nghiên cứu & Phát triển (R&D)","Hang_Muc":"Mua sắm thiết bị GPU phục vụ Training","Ngan_Sach_Du_Kien":760000000,"Chi_Tieu_Thuc_Te":864946084,"Chenh_Lech":-104946084,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":113.8},{"Ma_Giao_Dich":"TX-2026-0047","Ngay":"2026-05-13","Quy":"Q2","Phong_Ban":"Nghiên cứu & Phát triển (R&D)","Hang_Muc":"Đăng ký sáng chế & sở hữu trí tuệ","Ngan_Sach_Du_Kien":130000000,"Chi_Tieu_Thuc_Te":183581840,"Chenh_Lech":-53581840,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":141.2},{"Ma_Giao_Dich":"TX-2026-0048","Ngay":"2026-06-02","Quy":"Q2","Phong_Ban":"Nghiên cứu & Phát triển (R&D)","Hang_Muc":"Thuê chuyên gia cố vấn công nghệ","Ngan_Sach_Du_Kien":150000000,"Chi_Tieu_Thuc_Te":116696045,"Chenh_Lech":33303955,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":77.8},{"Ma_Giao_Dich":"TX-2026-0049","Ngay":"2026-09-12","Quy":"Q3","Phong_Ban":"Công nghệ thông tin (IT)","Hang_Muc":"Hạ tầng Cloud AWS/GCP","Ngan_Sach_Du_Kien":330000000,"Chi_Tieu_Thuc_Te":297837777,"Chenh_Lech":32162223,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":90.3},{"Ma_Giao_Dich":"TX-2026-0050","Ngay":"2026-08-22","Quy":"Q3","Phong_Ban":"Công nghệ thông tin (IT)","Hang_Muc":"Bản quyền phần mềm AI & Dev","Ngan_Sach_Du_Kien":790000000,"Chi_Tieu_Thuc_Te":726557816,"Chenh_Lech":63442184,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":92},{"Ma_Giao_Dich":"TX-2026-0051","Ngay":"2026-08-15","Quy":"Q3","Phong_Ban":"Công nghệ thông tin (IT)","Hang_Muc":"Nâng cấp hệ thống máy chủ","Ngan_Sach_Du_Kien":300000000,"Chi_Tieu_Thuc_Te":394077929,"Chenh_Lech":-94077929,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":131.4},{"Ma_Giao_Dich":"TX-2026-0052","Ngay":"2026-07-07","Quy":"Q3","Phong_Ban":"Công nghệ thông tin (IT)","Hang_Muc":"An toàn thông tin & Bảo mật","Ngan_Sach_Du_Kien":600000000,"Chi_Tieu_Thuc_Te":565124573,"Chenh_Lech":34875427,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":94.2},{"Ma_Giao_Dich":"TX-2026-0053","Ngay":"2026-07-14","Quy":"Q3","Phong_Ban":"Marketing & Truyền thông","Hang_Muc":"Chiến dịch Quảng cáo Meta & Google","Ngan_Sach_Du_Kien":180000000,"Chi_Tieu_Thuc_Te":241431378,"Chenh_Lech":-61431378,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":134.1},{"Ma_Giao_Dich":"TX-2026-0054","Ngay":"2026-07-18","Quy":"Q3","Phong_Ban":"Marketing & Truyền thông","Hang_Muc":"Sự kiện ra mắt sản phẩm mới","Ngan_Sach_Du_Kien":370000000,"Chi_Tieu_Thuc_Te":467870291,"Chenh_Lech":-97870291,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":126.5},{"Ma_Giao_Dich":"TX-2026-0055","Ngay":"2026-07-10","Quy":"Q3","Phong_Ban":"Marketing & Truyền thông","Hang_Muc":"Thuê KOLs và Media Agency","Ngan_Sach_Du_Kien":600000000,"Chi_Tieu_Thuc_Te":741030736,"Chenh_Lech":-141030736,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":123.5},{"Ma_Giao_Dich":"TX-2026-0056","Ngay":"2026-07-13","Quy":"Q3","Phong_Ban":"Marketing & Truyền thông","Hang_Muc":"Sản xuất Video & Brand Awareness","Ngan_Sach_Du_Kien":620000000,"Chi_Tieu_Thuc_Te":582595852,"Chenh_Lech":37404148,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":94},{"Ma_Giao_Dich":"TX-2026-0057","Ngay":"2026-07-02","Quy":"Q3","Phong_Ban":"Kinh doanh (Sales)","Hang_Muc":"Chi phí tiếp khách & đàm phán hợp đồng","Ngan_Sach_Du_Kien":120000000,"Chi_Tieu_Thuc_Te":102163754,"Chenh_Lech":17836246,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":85.1},{"Ma_Giao_Dich":"TX-2026-0058","Ngay":"2026-07-22","Quy":"Q3","Phong_Ban":"Kinh doanh (Sales)","Hang_Muc":"Công tác phí thị trường miền Nam & Trung","Ngan_Sach_Du_Kien":170000000,"Chi_Tieu_Thuc_Te":159397916,"Chenh_Lech":10602084,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":93.8},{"Ma_Giao_Dich":"TX-2026-0059","Ngay":"2026-08-21","Quy":"Q3","Phong_Ban":"Kinh doanh (Sales)","Hang_Muc":"Thưởng hoa hồng mở rộng đại lý","Ngan_Sach_Du_Kien":580000000,"Chi_Tieu_Thuc_Te":440712561,"Chenh_Lech":139287439,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":76},{"Ma_Giao_Dich":"TX-2026-0060","Ngay":"2026-08-19","Quy":"Q3","Phong_Ban":"Kinh doanh (Sales)","Hang_Muc":"Tham gia triển lãm B2B Quốc tế","Ngan_Sach_Du_Kien":130000000,"Chi_Tieu_Thuc_Te":136612079,"Chenh_Lech":-6612079,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":105.1},{"Ma_Giao_Dich":"TX-2026-0061","Ngay":"2026-08-06","Quy":"Q3","Phong_Ban":"Nhân sự & Đào tạo (HR)","Hang_Muc":"Tuyển dụng Kỹ sư AI & Quản lý cấp cao","Ngan_Sach_Du_Kien":390000000,"Chi_Tieu_Thuc_Te":358736125,"Chenh_Lech":31263875,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":92},{"Ma_Giao_Dich":"TX-2026-0062","Ngay":"2026-09-10","Quy":"Q3","Phong_Ban":"Nhân sự & Đào tạo (HR)","Hang_Muc":"Chương trình đào tạo kỹ năng Clear AI","Ngan_Sach_Du_Kien":600000000,"Chi_Tieu_Thuc_Te":542724893,"Chenh_Lech":57275107,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":90.5},{"Ma_Giao_Dich":"TX-2026-0063","Ngay":"2026-07-08","Quy":"Q3","Phong_Ban":"Nhân sự & Đào tạo (HR)","Hang_Muc":"Teambuilding & Văn hóa doanh nghiệp","Ngan_Sach_Du_Kien":680000000,"Chi_Tieu_Thuc_Te":794704528,"Chenh_Lech":-114704528,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":116.9},{"Ma_Giao_Dich":"TX-2026-0064","Ngay":"2026-08-10","Quy":"Q3","Phong_Ban":"Nhân sự & Đào tạo (HR)","Hang_Muc":"Khám sức khỏe định kỳ & Bảo hiểm","Ngan_Sach_Du_Kien":800000000,"Chi_Tieu_Thuc_Te":573654496,"Chenh_Lech":226345504,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":71.7},{"Ma_Giao_Dich":"TX-2026-0065","Ngay":"2026-09-06","Quy":"Q3","Phong_Ban":"Tài chính - Kế toán","Hang_Muc":"Kiểm toán độc lập báo cáo năm","Ngan_Sach_Du_Kien":130000000,"Chi_Tieu_Thuc_Te":161293002,"Chenh_Lech":-31293002,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":124.1},{"Ma_Giao_Dich":"TX-2026-0066","Ngay":"2026-07-24","Quy":"Q3","Phong_Ban":"Tài chính - Kế toán","Hang_Muc":"Phí bản quyền phần mềm ERP Fast","Ngan_Sach_Du_Kien":260000000,"Chi_Tieu_Thuc_Te":325814163,"Chenh_Lech":-65814163,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":125.3},{"Ma_Giao_Dich":"TX-2026-0067","Ngay":"2026-07-31","Quy":"Q3","Phong_Ban":"Tài chính - Kế toán","Hang_Muc":"Tư vấn luật & Thuế doanh nghiệp","Ngan_Sach_Du_Kien":140000000,"Chi_Tieu_Thuc_Te":124468332,"Chenh_Lech":15531668,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":88.9},{"Ma_Giao_Dich":"TX-2026-0068","Ngay":"2026-08-01","Quy":"Q3","Phong_Ban":"Tài chính - Kế toán","Hang_Muc":"Chi phí giao dịch ngân hàng & POS","Ngan_Sach_Du_Kien":570000000,"Chi_Tieu_Thuc_Te":801485507,"Chenh_Lech":-231485507,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":140.6},{"Ma_Giao_Dich":"TX-2026-0069","Ngay":"2026-08-23","Quy":"Q3","Phong_Ban":"Nghiên cứu & Phát triển (R&D)","Hang_Muc":"Nghiên cứu Fine-tuning mô hình AI","Ngan_Sach_Du_Kien":800000000,"Chi_Tieu_Thuc_Te":698741458,"Chenh_Lech":101258542,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":87.3},{"Ma_Giao_Dich":"TX-2026-0070","Ngay":"2026-08-03","Quy":"Q3","Phong_Ban":"Nghiên cứu & Phát triển (R&D)","Hang_Muc":"Mua sắm thiết bị GPU phục vụ Training","Ngan_Sach_Du_Kien":800000000,"Chi_Tieu_Thuc_Te":630866845,"Chenh_Lech":169133155,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":78.9},{"Ma_Giao_Dich":"TX-2026-0071","Ngay":"2026-08-03","Quy":"Q3","Phong_Ban":"Nghiên cứu & Phát triển (R&D)","Hang_Muc":"Đăng ký sáng chế & sở hữu trí tuệ","Ngan_Sach_Du_Kien":320000000,"Chi_Tieu_Thuc_Te":252150874,"Chenh_Lech":67849126,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":78.8},{"Ma_Giao_Dich":"TX-2026-0072","Ngay":"2026-08-28","Quy":"Q3","Phong_Ban":"Nghiên cứu & Phát triển (R&D)","Hang_Muc":"Thuê chuyên gia cố vấn công nghệ","Ngan_Sach_Du_Kien":560000000,"Chi_Tieu_Thuc_Te":732592176,"Chenh_Lech":-172592176,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":130.8},{"Ma_Giao_Dich":"TX-2026-0073","Ngay":"2026-10-02","Quy":"Q4","Phong_Ban":"Công nghệ thông tin (IT)","Hang_Muc":"Hạ tầng Cloud AWS/GCP","Ngan_Sach_Du_Kien":460000000,"Chi_Tieu_Thuc_Te":442522576,"Chenh_Lech":17477424,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":96.2},{"Ma_Giao_Dich":"TX-2026-0074","Ngay":"2026-10-13","Quy":"Q4","Phong_Ban":"Công nghệ thông tin (IT)","Hang_Muc":"Bản quyền phần mềm AI & Dev","Ngan_Sach_Du_Kien":640000000,"Chi_Tieu_Thuc_Te":548888461,"Chenh_Lech":91111539,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":85.8},{"Ma_Giao_Dich":"TX-2026-0075","Ngay":"2026-10-17","Quy":"Q4","Phong_Ban":"Công nghệ thông tin (IT)","Hang_Muc":"Nâng cấp hệ thống máy chủ","Ngan_Sach_Du_Kien":150000000,"Chi_Tieu_Thuc_Te":126247157,"Chenh_Lech":23752843,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":84.2},{"Ma_Giao_Dich":"TX-2026-0076","Ngay":"2026-11-17","Quy":"Q4","Phong_Ban":"Công nghệ thông tin (IT)","Hang_Muc":"An toàn thông tin & Bảo mật","Ngan_Sach_Du_Kien":500000000,"Chi_Tieu_Thuc_Te":473097833,"Chenh_Lech":26902167,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":94.6},{"Ma_Giao_Dich":"TX-2026-0077","Ngay":"2026-12-30","Quy":"Q4","Phong_Ban":"Marketing & Truyền thông","Hang_Muc":"Chiến dịch Quảng cáo Meta & Google","Ngan_Sach_Du_Kien":420000000,"Chi_Tieu_Thuc_Te":581069152,"Chenh_Lech":-161069152,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":138.3},{"Ma_Giao_Dich":"TX-2026-0078","Ngay":"2026-12-23","Quy":"Q4","Phong_Ban":"Marketing & Truyền thông","Hang_Muc":"Sự kiện ra mắt sản phẩm mới","Ngan_Sach_Du_Kien":440000000,"Chi_Tieu_Thuc_Te":429627113,"Chenh_Lech":10372887,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":97.6},{"Ma_Giao_Dich":"TX-2026-0079","Ngay":"2026-11-08","Quy":"Q4","Phong_Ban":"Marketing & Truyền thông","Hang_Muc":"Thuê KOLs và Media Agency","Ngan_Sach_Du_Kien":730000000,"Chi_Tieu_Thuc_Te":1005094407,"Chenh_Lech":-275094407,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":137.7},{"Ma_Giao_Dich":"TX-2026-0080","Ngay":"2026-10-15","Quy":"Q4","Phong_Ban":"Marketing & Truyền thông","Hang_Muc":"Sản xuất Video & Brand Awareness","Ngan_Sach_Du_Kien":190000000,"Chi_Tieu_Thuc_Te":140144287,"Chenh_Lech":49855713,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":73.8},{"Ma_Giao_Dich":"TX-2026-0081","Ngay":"2026-11-06","Quy":"Q4","Phong_Ban":"Kinh doanh (Sales)","Hang_Muc":"Chi phí tiếp khách & đàm phán hợp đồng","Ngan_Sach_Du_Kien":190000000,"Chi_Tieu_Thuc_Te":141269828,"Chenh_Lech":48730172,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":74.4},{"Ma_Giao_Dich":"TX-2026-0082","Ngay":"2026-12-27","Quy":"Q4","Phong_Ban":"Kinh doanh (Sales)","Hang_Muc":"Công tác phí thị trường miền Nam & Trung","Ngan_Sach_Du_Kien":830000000,"Chi_Tieu_Thuc_Te":985336255,"Chenh_Lech":-155336255,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":118.7},{"Ma_Giao_Dich":"TX-2026-0083","Ngay":"2026-10-07","Quy":"Q4","Phong_Ban":"Kinh doanh (Sales)","Hang_Muc":"Thưởng hoa hồng mở rộng đại lý","Ngan_Sach_Du_Kien":390000000,"Chi_Tieu_Thuc_Te":300422440,"Chenh_Lech":89577560,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":77},{"Ma_Giao_Dich":"TX-2026-0084","Ngay":"2026-10-06","Quy":"Q4","Phong_Ban":"Kinh doanh (Sales)","Hang_Muc":"Tham gia triển lãm B2B Quốc tế","Ngan_Sach_Du_Kien":170000000,"Chi_Tieu_Thuc_Te":158476969,"Chenh_Lech":11523031,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":93.2},{"Ma_Giao_Dich":"TX-2026-0085","Ngay":"2026-11-03","Quy":"Q4","Phong_Ban":"Nhân sự & Đào tạo (HR)","Hang_Muc":"Tuyển dụng Kỹ sư AI & Quản lý cấp cao","Ngan_Sach_Du_Kien":60000000,"Chi_Tieu_Thuc_Te":44197770,"Chenh_Lech":15802230,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":73.7},{"Ma_Giao_Dich":"TX-2026-0086","Ngay":"2026-11-24","Quy":"Q4","Phong_Ban":"Nhân sự & Đào tạo (HR)","Hang_Muc":"Chương trình đào tạo kỹ năng Clear AI","Ngan_Sach_Du_Kien":260000000,"Chi_Tieu_Thuc_Te":222162334,"Chenh_Lech":37837666,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":85.4},{"Ma_Giao_Dich":"TX-2026-0087","Ngay":"2026-12-28","Quy":"Q4","Phong_Ban":"Nhân sự & Đào tạo (HR)","Hang_Muc":"Teambuilding & Văn hóa doanh nghiệp","Ngan_Sach_Du_Kien":770000000,"Chi_Tieu_Thuc_Te":831675108,"Chenh_Lech":-61675108,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":108},{"Ma_Giao_Dich":"TX-2026-0088","Ngay":"2026-12-14","Quy":"Q4","Phong_Ban":"Nhân sự & Đào tạo (HR)","Hang_Muc":"Khám sức khỏe định kỳ & Bảo hiểm","Ngan_Sach_Du_Kien":250000000,"Chi_Tieu_Thuc_Te":233421651,"Chenh_Lech":16578349,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":93.4},{"Ma_Giao_Dich":"TX-2026-0089","Ngay":"2026-11-09","Quy":"Q4","Phong_Ban":"Tài chính - Kế toán","Hang_Muc":"Kiểm toán độc lập báo cáo năm","Ngan_Sach_Du_Kien":760000000,"Chi_Tieu_Thuc_Te":836743437,"Chenh_Lech":-76743437,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":110.1},{"Ma_Giao_Dich":"TX-2026-0090","Ngay":"2026-10-06","Quy":"Q4","Phong_Ban":"Tài chính - Kế toán","Hang_Muc":"Phí bản quyền phần mềm ERP Fast","Ngan_Sach_Du_Kien":520000000,"Chi_Tieu_Thuc_Te":479915407,"Chenh_Lech":40084593,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":92.3},{"Ma_Giao_Dich":"TX-2026-0091","Ngay":"2026-10-14","Quy":"Q4","Phong_Ban":"Tài chính - Kế toán","Hang_Muc":"Tư vấn luật & Thuế doanh nghiệp","Ngan_Sach_Du_Kien":510000000,"Chi_Tieu_Thuc_Te":586404066,"Chenh_Lech":-76404066,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":115},{"Ma_Giao_Dich":"TX-2026-0092","Ngay":"2026-11-22","Quy":"Q4","Phong_Ban":"Tài chính - Kế toán","Hang_Muc":"Chi phí giao dịch ngân hàng & POS","Ngan_Sach_Du_Kien":510000000,"Chi_Tieu_Thuc_Te":483254435,"Chenh_Lech":26745565,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":94.8},{"Ma_Giao_Dich":"TX-2026-0093","Ngay":"2026-10-31","Quy":"Q4","Phong_Ban":"Nghiên cứu & Phát triển (R&D)","Hang_Muc":"Nghiên cứu Fine-tuning mô hình AI","Ngan_Sach_Du_Kien":850000000,"Chi_Tieu_Thuc_Te":815331789,"Chenh_Lech":34668211,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":95.9},{"Ma_Giao_Dich":"TX-2026-0094","Ngay":"2026-11-22","Quy":"Q4","Phong_Ban":"Nghiên cứu & Phát triển (R&D)","Hang_Muc":"Mua sắm thiết bị GPU phục vụ Training","Ngan_Sach_Du_Kien":260000000,"Chi_Tieu_Thuc_Te":241024181,"Chenh_Lech":18975819,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":92.7},{"Ma_Giao_Dich":"TX-2026-0095","Ngay":"2026-11-22","Quy":"Q4","Phong_Ban":"Nghiên cứu & Phát triển (R&D)","Hang_Muc":"Đăng ký sáng chế & sở hữu trí tuệ","Ngan_Sach_Du_Kien":90000000,"Chi_Tieu_Thuc_Te":127781542,"Chenh_Lech":-37781542,"Trang_Thai":"Vượt ngân sách","Phan_Tram_Su_Dung":142},{"Ma_Giao_Dich":"TX-2026-0096","Ngay":"2026-10-14","Quy":"Q4","Phong_Ban":"Nghiên cứu & Phát triển (R&D)","Hang_Muc":"Thuê chuyên gia cố vấn công nghệ","Ngan_Sach_Du_Kien":370000000,"Chi_Tieu_Thuc_Te":340571999,"Chenh_Lech":29428001,"Trang_Thai":"Trong ngân sách","Phan_Tram_Su_Dung":92}]
+;
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let allData = JSON.parse(JSON.stringify(RAW_DATA)); // deep copy
+let activeQ = "ALL";
+let activeD = "ALL";
+let barChart = null;
+let donutChart = null;
+let prevBudget = -1, prevExpense = -1, prevOver = -1;
+let tickCount = 0;
+
+const DEPT_SHORT = {
+  "Công nghệ thông tin (IT)": "IT",
+  "Marketing & Truyền thông": "Marketing",
+  "Kinh doanh (Sales)": "Sales",
+  "Nhân sự & Đào tạo (HR)": "HR",
+  "Tài chính - Kế toán": "Tài chính",
+  "Nghiên cứu & Phát triển (R&D)": "R&D"
+};
+const DONUT_COLORS = [
+  "rgba(124,58,237,0.85)","rgba(6,182,212,0.85)","rgba(244,63,94,0.85)",
+  "rgba(16,185,129,0.85)","rgba(245,158,11,0.85)","rgba(99,102,241,0.85)"
+];
+
+// ═══════════════════════════════════════════════════════
+// REAL-TIME SIMULATION
+// Mỗi 2 giây: thêm tiny random noise vào chi tiêu
+// (Simulate ERP streaming — sẽ được thay bằng API thật khi có server)
+// ═══════════════════════════════════════════════════════
+function simulateRealtime() {
+  tickCount++;
+  // Mỗi 5 ticks (10s) mô phỏng một số giao dịch cập nhật
+  if (tickCount % 5 === 0) {
+    const numToUpdate = Math.floor(Math.random() * 4) + 1;
+    for (let i = 0; i < numToUpdate; i++) {
+      const idx = Math.floor(Math.random() * allData.length);
+      const row = allData[idx];
+      // Chỉ thay đổi nhỏ ±0.3% để mô phỏng cập nhật thực tế
+      const delta = row.Chi_Tieu_Thuc_Te * (Math.random() * 0.006 - 0.003);
+      row.Chi_Tieu_Thuc_Te = Math.max(0, Math.round(row.Chi_Tieu_Thuc_Te + delta));
+      row.Chenh_Lech = row.Ngan_Sach_Du_Kien - row.Chi_Tieu_Thuc_Te;
+      row.Trang_Thai = row.Chi_Tieu_Thuc_Te > row.Ngan_Sach_Du_Kien ? "Vượt ngân sách" : "Trong ngân sách";
+      row.Phan_Tram_Su_Dung = parseFloat((row.Chi_Tieu_Thuc_Te / row.Ngan_Sach_Du_Kien * 100).toFixed(1));
+    }
+    renderDash();
+  }
+  // Cập nhật timestamp mỗi tick
+  const now = new Date();
+  document.getElementById("tsLabel").textContent =
+    "Cập nhật: " + now.toLocaleTimeString("vi-VN");
+}
+
+// ═══════════════════════════════════════════════════════
+// COUNTER ANIMATION
+// ═══════════════════════════════════════════════════════
+function animCount(el, target, fmt, dur = 1200) {
+  const t0 = performance.now();
+  function step(now) {
+    const p = Math.min((now - t0) / dur, 1);
+    const e = 1 - Math.pow(1 - p, 3);
+    el.textContent = fmt(target * e);
+    if (p < 1) requestAnimationFrame(step);
+    else el.textContent = fmt(target);
+  }
+  requestAnimationFrame(step);
+}
+
+// ═══════════════════════════════════════════════════════
+// FILTER
+// ═══════════════════════════════════════════════════════
+function getFiltered() {
+  return allData.filter(r => {
+    return (activeQ === "ALL" || r.Quy === activeQ) &&
+           (activeD === "ALL" || r.Phong_Ban === activeD);
+  });
+}
+
+function setQ(q) {
+  activeQ = q;
+  prevBudget = prevExpense = prevOver = -1;
+  document.querySelectorAll(".btn-q").forEach(b => b.classList.toggle("active", b.dataset.q === q));
+  renderDash();
+}
+
+function setD(d) {
+  activeD = d;
+  prevBudget = prevExpense = prevOver = -1;
+  renderDash();
+}
+
+// ═══════════════════════════════════════════════════════
+// UPDATE KPIs
+// ═══════════════════════════════════════════════════════
+function updateKPIs(f) {
+  const tb = f.reduce((s,r) => s + r.Ngan_Sach_Du_Kien, 0);
+  const te = f.reduce((s,r) => s + r.Chi_Tieu_Thuc_Te, 0);
+  const oc = f.filter(r => r.Trang_Thai === "Vượt ngân sách").length;
+  const pct = tb > 0 ? ((te/tb)*100).toFixed(1) : "0";
+  const opc = f.length > 0 ? ((oc/f.length)*100).toFixed(1) : "0";
+
+  const bTy = tb/1e9, eTy = te/1e9;
+
+  if (prevBudget !== bTy)  { animCount(document.getElementById("kBudget"),  bTy,  v => v.toFixed(2)); prevBudget = bTy; }
+  if (prevExpense !== eTy) { animCount(document.getElementById("kExpense"), eTy,  v => v.toFixed(2)); prevExpense = eTy; }
+  if (prevOver !== oc)     { animCount(document.getElementById("kOver"),    oc,   v => Math.floor(v).toString()); prevOver = oc; }
+
+  document.getElementById("kBudgetSub").textContent = f.length + " giao dịch";
+  document.getElementById("kExpPct").textContent    = pct + "% so với NS";
+  document.getElementById("kOverPct").textContent   = opc + "% tổng giao dịch";
+}
+
+// ═══════════════════════════════════════════════════════
+// UPDATE BAR CHART
+// ═══════════════════════════════════════════════════════
+function updateBar(f) {
+  const depts = [...new Set(RAW_DATA.map(r => r.Phong_Ban))].sort();
+  const bv = {}, ev = {};
+  depts.forEach(d => { bv[d] = 0; ev[d] = 0; });
+  f.forEach(r => { bv[r.Phong_Ban] += r.Ngan_Sach_Du_Kien; ev[r.Phong_Ban] += r.Chi_Tieu_Thuc_Te; });
+  const labels = depts.map(d => DEPT_SHORT[d]||d);
+  const bvals  = depts.map(d => Math.round(bv[d]/1e6));
+  const evals  = depts.map(d => Math.round(ev[d]/1e6));
+
+  if (barChart) {
+    barChart.data.labels = labels;
+    barChart.data.datasets[0].data = bvals;
+    barChart.data.datasets[1].data = evals;
+    barChart.update("active");
+  } else {
+    const ctx = document.getElementById("barChart").getContext("2d");
+    barChart = new Chart(ctx, {
+      type:"bar",
+      data:{
+        labels,
+        datasets:[
+          {label:"Ngân sách",data:bvals,backgroundColor:"rgba(124,58,237,0.75)",borderColor:"#7C3AED",borderWidth:1.5,borderRadius:6,borderSkipped:false},
+          {label:"Chi tiêu", data:evals,backgroundColor:"rgba(6,182,212,0.70)", borderColor:"#06B6D4",borderWidth:1.5,borderRadius:6,borderSkipped:false}
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          tooltip:{
+            backgroundColor:"rgba(11,15,25,0.94)",borderColor:"rgba(255,255,255,0.1)",borderWidth:1,padding:12,
+            titleColor:"#f8fafc",bodyColor:"#94a3b8",
+            callbacks:{label:c => " "+c.dataset.label+": "+c.parsed.y.toLocaleString("vi-VN")+" Tr.đ"}
+          }
+        },
+        scales:{
+          x:{ticks:{color:"#64748b",font:{size:11,family:"Plus Jakarta Sans"}},grid:{color:"rgba(255,255,255,0.04)"},border:{color:"rgba(255,255,255,0.06)"}},
+          y:{ticks:{color:"#64748b",font:{size:10},callback:v=>v.toLocaleString("vi-VN")},grid:{color:"rgba(255,255,255,0.05)"},border:{color:"rgba(255,255,255,0.06)"}}
+        },
+        animation:{duration:600,easing:"easeOutCubic"}
+      }
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// UPDATE DONUT CHART
+// ═══════════════════════════════════════════════════════
+function updateDonut(f) {
+  const depts = [...new Set(RAW_DATA.map(r => r.Phong_Ban))].sort();
+  const ev = {};
+  depts.forEach(d => { ev[d] = 0; });
+  f.forEach(r => { ev[r.Phong_Ban] += r.Chi_Tieu_Thuc_Te; });
+  const labels = depts.map(d => DEPT_SHORT[d]||d);
+  const vals   = depts.map(d => Math.round(ev[d]/1e6));
+
+  if (donutChart) {
+    donutChart.data.labels = labels;
+    donutChart.data.datasets[0].data = vals;
+    donutChart.update("active");
+  } else {
+    const ctx = document.getElementById("donutChart").getContext("2d");
+    donutChart = new Chart(ctx, {
+      type:"doughnut",
+      data:{
+        labels,
+        datasets:[{data:vals,backgroundColor:DONUT_COLORS,borderColor:"rgba(11,15,25,0.8)",borderWidth:2,hoverOffset:8}]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,cutout:"62%",
+        plugins:{
+          legend:{position:"bottom",labels:{color:"#94a3b8",font:{size:11,family:"Plus Jakarta Sans"},padding:14,usePointStyle:true,pointStyleWidth:10}},
+          tooltip:{
+            backgroundColor:"rgba(11,15,25,0.94)",borderColor:"rgba(255,255,255,0.1)",borderWidth:1,padding:12,
+            callbacks:{label:c=>{const t=c.dataset.data.reduce((a,b)=>a+b,0);return " "+c.parsed.toLocaleString("vi-VN")+" Tr.đ  ("+( t>0?((c.parsed/t)*100).toFixed(1):0)+"%)";}}
+          }
+        },
+        animation:{duration:600,easing:"easeOutCubic"}
+      }
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// UPDATE TABLE
+// ═══════════════════════════════════════════════════════
+function fmtTr(v) { return Math.round(v/1e6).toLocaleString("vi-VN"); }
+
+function updateTable(f) {
+  const over = f.filter(r => r.Trang_Thai === "Vượt ngân sách").sort((a,b)=>a.Chenh_Lech-b.Chenh_Lech);
+  document.getElementById("overBadge").textContent = over.length + " giao dịch vượt NS";
+  const body = document.getElementById("tblBody");
+  if (!over.length) {
+    body.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text-muted)">✅ Không có giao dịch vượt NS trong bộ lọc này.</td></tr>';
+    return;
+  }
+  body.innerHTML = over.map(r => `
+    <tr>
+      <td class="td-code">${r.Ma_Giao_Dich}</td>
+      <td style="color:var(--text-muted)">${String(r.Ngay||"").slice(0,10)}</td>
+      <td style="color:#c4b5fd;font-weight:700">${r.Quy}</td>
+      <td class="td-dept" title="${r.Phong_Ban}">${DEPT_SHORT[r.Phong_Ban]||r.Phong_Ban}</td>
+      <td class="td-muc" title="${r.Hang_Muc}">${r.Hang_Muc}</td>
+      <td class="td-budget">${fmtTr(r.Ngan_Sach_Du_Kien)}</td>
+      <td class="td-exp">${fmtTr(r.Chi_Tieu_Thuc_Te)}</td>
+      <td class="td-over">+${fmtTr(Math.abs(r.Chenh_Lech))}</td>
+      <td style="color:#fda4af;font-weight:700">${r.Phan_Tram_Su_Dung}%</td>
+      <td><span class="sbadge s-over">🔴 Vượt NS</span></td>
+    </tr>`).join("");
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER ALL
+// ═══════════════════════════════════════════════════════
+function renderDash() {
+  const f = getFiltered();
+  updateKPIs(f);
+  updateBar(f);
+  updateDonut(f);
+  updateTable(f);
+}
+
+// ═══════════════════════════════════════════════════════
+// EXPORT STATIC HTML
+// ═══════════════════════════════════════════════════════
+function doExport() {
+  const f = getFiltered();
+  const tb = f.reduce((s,r)=>s+r.Ngan_Sach_Du_Kien,0);
+  const te = f.reduce((s,r)=>s+r.Chi_Tieu_Thuc_Te,0);
+  const over = f.filter(r=>r.Trang_Thai==="Vượt ngân sách").sort((a,b)=>a.Chenh_Lech-b.Chenh_Lech);
+  const pct = tb>0?((te/tb)*100).toFixed(1):"0";
+
+  const depts = [...new Set(RAW_DATA.map(r=>r.Phong_Ban))].sort();
+  const bvMap={},evMap={};
+  depts.forEach(d=>{bvMap[d]=0;evMap[d]=0;});
+  f.forEach(r=>{bvMap[r.Phong_Ban]+=r.Ngan_Sach_Du_Kien;evMap[r.Phong_Ban]+=r.Chi_Tieu_Thuc_Te;});
+  const dL=depts.map(d=>DEPT_SHORT[d]||d);
+  const bV=depts.map(d=>Math.round(bvMap[d]/1e6));
+  const eV=depts.map(d=>Math.round(evMap[d]/1e6));
+  const dV=depts.map(d=>Math.round(evMap[d]/1e6));
+
+  const qL = activeQ==="ALL"?"NamToan":activeQ;
+  const dL2= activeD==="ALL"?"TatCaPhong":activeD.replace(/[^a-zA-Z0-9]/g,"");
+  const today = new Date().toISOString().slice(0,10);
+  const fname = "BetaSolutions_NganSach_"+qL+"_"+dL2+"_"+today+".html";
+  const flabel = (activeQ==="ALL"?"Toàn năm":activeQ) + " · " + (activeD==="ALL"?"Tất cả phòng ban":activeD);
+
+  const trows = over.map(r=>`<tr>
+    <td style="font-size:0.7rem;color:#64748b;font-family:monospace">${r.Ma_Giao_Dich}</td>
+    <td style="color:#64748b">${String(r.Ngay||"").slice(0,10)}</td>
+    <td style="color:#c4b5fd;font-weight:700">${r.Quy}</td>
+    <td style="color:#94a3b8">${DEPT_SHORT[r.Phong_Ban]||r.Phong_Ban}</td>
+    <td style="color:#f8fafc">${r.Hang_Muc}</td>
+    <td style="color:#c4b5fd;font-weight:600">${fmtTr(r.Ngan_Sach_Du_Kien)}</td>
+    <td style="color:#67e8f9;font-weight:600">${fmtTr(r.Chi_Tieu_Thuc_Te)}</td>
+    <td style="color:#fda4af;font-weight:700">+${fmtTr(Math.abs(r.Chenh_Lech))}</td>
+    <td style="color:#fda4af;font-weight:700">${r.Phan_Tram_Su_Dung}%</td>
+  </tr>`).join("");
+
+  const html = `<!DOCTYPE html>
+<html lang="vi"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Báo Cáo Ngân Sách Beta Solutions — ${qL} ${today}</title>
+<meta name="description" content="Snapshot báo cáo ngân sách Beta Solutions ${flabel}. Xuất ngày ${today}."/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"><\/script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(ellipse 120% 80% at 15% 10%,#150d2e,#05070f 60%);color:#f8fafc;min-height:100vh;padding:24px}
+.w{max-width:1400px;margin:0 auto}
+.g{background:rgba(15,23,42,0.72);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.08);border-radius:18px;box-shadow:0 8px 32px rgba(0,0,0,0.4)}
+.hdr{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.hl{display:flex;align-items:center;gap:14px}
+.lgo{width:46px;height:46px;border-radius:11px;background:linear-gradient(135deg,#7C3AED,#5b21b6);display:flex;align-items:center;justify-content:center;font-size:21px;box-shadow:0 0 18px rgba(124,58,237,0.35)}
+h1{font-size:1.08rem;font-weight:800;letter-spacing:-0.02em}
+.sub{font-size:0.73rem;color:#94a3b8;margin-top:2px}
+.stamp{font-size:0.78rem;color:#94a3b8}
+.stamp b{color:#7C3AED}
+.kg{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:20px}
+.kc{padding:20px 22px;border-radius:18px}
+.kl{font-size:0.7rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px}
+.kv{font-size:1.9rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:3px}
+.ku{font-size:0.7rem;color:#64748b}
+.kb .kv{color:#c4b5fd}.ke .kv{color:#67e8f9}.ko .kv{color:#fda4af}
+.cr{display:grid;grid-template-columns:1.7fr 1fr;gap:18px;margin-bottom:20px}
+.cc{padding:20px 22px}
+.ct{font-size:0.9rem;font-weight:700;margin-bottom:3px}
+.cs{font-size:0.71rem;color:#64748b;margin-bottom:16px}
+.cw{height:280px;position:relative}
+.dw{height:270px;position:relative}
+.tc{padding:20px 22px}
+table{width:100%;border-collapse:collapse;font-size:0.77rem}
+th{padding:10px 12px;text-align:left;font-size:0.66rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.07em;border-bottom:1px solid rgba(255,255,255,0.07)}
+td{padding:10px 12px;color:#94a3b8;border-bottom:1px solid rgba(255,255,255,0.03)}
+tr:hover{background:rgba(255,255,255,0.03)}
+.fp{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.3);border-radius:20px;font-size:0.73rem;font-weight:600;color:#c4b5fd;margin-bottom:14px}
+.ft{text-align:center;padding:14px;font-size:0.7rem;color:#475569;margin-top:6px}
+.ft span{color:#7C3AED;font-weight:700}
+</style></head><body>
+<div class="w">
+<div class="g hdr">
+  <div class="hl">
+    <div class="lgo">💜</div>
+    <div><h1>Beta Solutions — Báo Cáo Ngân Sách 2026</h1><div class="sub">Snapshot tĩnh · Xuất ${today} · Trưởng phòng Tài chính</div></div>
+  </div>
+  <div class="stamp">Bộ lọc: <b>${flabel}</b></div>
+</div>
+<div class="fp">📌 ${flabel} · ${f.length} giao dịch · Xuất lúc ${new Date().toLocaleString("vi-VN")}</div>
+<div class="kg">
+  <div class="g kc kb" style="border-top:2px solid #7C3AED"><div class="kl">Tổng Ngân Sách</div><div class="kv">${(tb/1e9).toFixed(2)}</div><div class="ku">Tỷ VNĐ · ${f.length} giao dịch</div></div>
+  <div class="g kc ke" style="border-top:2px solid #06B6D4"><div class="kl">Tổng Chi Tiêu</div><div class="kv">${(te/1e9).toFixed(2)}</div><div class="ku">Tỷ VNĐ · ${pct}% so với NS</div></div>
+  <div class="g kc ko" style="border-top:2px solid #F43F5E"><div class="kl">Vượt Ngân Sách</div><div class="kv">${over.length}</div><div class="ku">giao dịch · ${f.length>0?((over.length/f.length)*100).toFixed(1):0}% tổng GD</div></div>
+</div>
+<div class="cr">
+  <div class="g cc"><div class="ct">Ngân Sách vs Chi Tiêu theo Phòng Ban</div><div class="cs">Đơn vị: Triệu VNĐ</div><div class="cw"><canvas id="sBar"></canvas></div></div>
+  <div class="g cc"><div class="ct">Tỷ Trọng Chi Tiêu theo Phòng Ban</div><div class="cs">% phân bổ chi tiêu thực tế</div><div class="dw"><canvas id="sDon"></canvas></div></div>
+</div>
+<div class="g tc">
+  <div style="font-size:0.9rem;font-weight:700;margin-bottom:5px">🚨 Danh Sách Giao Dịch Vượt Ngân Sách</div>
+  <div style="font-size:0.7rem;color:#64748b;margin-bottom:14px">${over.length} giao dịch · sắp xếp theo mức vượt cao nhất</div>
+  <div style="overflow-x:auto"><table>
+    <thead><tr><th>Mã GD</th><th>Ngày</th><th>Quý</th><th>Phòng Ban</th><th>Hạng Mục</th><th>NS (Tr.đ)</th><th>CT (Tr.đ)</th><th>Vượt (Tr.đ)</th><th>% SD</th></tr></thead>
+    <tbody>${trows||'<tr><td colspan="9" style="text-align:center;padding:20px;color:#64748b">Không có giao dịch vượt NS</td></tr>'}</tbody>
+  </table></div>
+</div>
+<div class="ft">Báo cáo tĩnh — <span>Beta Solutions</span> · Dashboard Ngân Sách 2026 · ${new Date().toLocaleString("vi-VN")}</div>
+</div>
+<script>
+const dL=${JSON.stringify(dL)};const bV=${JSON.stringify(bV)};const eV=${JSON.stringify(eV)};const dV=${JSON.stringify(dV)};
+const C=["rgba(124,58,237,0.85)","rgba(6,182,212,0.85)","rgba(244,63,94,0.85)","rgba(16,185,129,0.85)","rgba(245,158,11,0.85)","rgba(99,102,241,0.85)"];
+new Chart(document.getElementById("sBar"),{type:"bar",data:{labels:dL,datasets:[{label:"Ngân sách",data:bV,backgroundColor:"rgba(124,58,237,0.75)",borderColor:"#7C3AED",borderWidth:1.5,borderRadius:6},{label:"Chi tiêu",data:eV,backgroundColor:"rgba(6,182,212,0.70)",borderColor:"#06B6D4",borderWidth:1.5,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#94a3b8"}},tooltip:{backgroundColor:"rgba(11,15,25,0.94)",borderColor:"rgba(255,255,255,0.1)",borderWidth:1}},scales:{x:{ticks:{color:"#64748b"},grid:{color:"rgba(255,255,255,0.04)"}},y:{ticks:{color:"#64748b",callback:v=>v.toLocaleString("vi-VN")},grid:{color:"rgba(255,255,255,0.05)"}}}}});
+new Chart(document.getElementById("sDon"),{type:"doughnut",data:{labels:dL,datasets:[{data:dV,backgroundColor:C,borderColor:"rgba(11,15,25,0.8)",borderWidth:2,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,cutout:"62%",plugins:{legend:{position:"bottom",labels:{color:"#94a3b8",font:{size:11},padding:12,usePointStyle:true}},tooltip:{backgroundColor:"rgba(11,15,25,0.94)",borderColor:"rgba(255,255,255,0.1)",borderWidth:1,callbacks:{label:c=>{const t=c.dataset.data.reduce((a,b)=>a+b,0);return " "+c.parsed.toLocaleString("vi-VN")+" Tr.đ ("+( t>0?((c.parsed/t)*100).toFixed(1):0)+"%)";}}}}}}); 
+<\/script></body></html>`;
+
+  const blob = new Blob([html], {type:"text/html;charset=utf-8"});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href = url; a.download = fname;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+
+  const btn = document.getElementById("btnExp");
+  const orig = btn.innerHTML;
+  btn.innerHTML = "✅ Đã xuất file!";
+  btn.style.background = "linear-gradient(135deg,#10b981,#059669)";
+  setTimeout(()=>{btn.innerHTML=orig;btn.style.background="";}, 2500);
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+document.addEventListener("DOMContentLoaded", () => {
+  setTimeout(() => {
+    document.getElementById("ldOv").classList.add("hide");
+    renderDash();
+    // Real-time tick mỗi 2 giây
+    setInterval(simulateRealtime, 2000);
+  }, 1200);
+});
+</script>
+</body>
+</html>

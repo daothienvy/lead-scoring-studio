@@ -1,0 +1,15 @@
+{
+  "name": "beta-solutions-budget-dashboard",
+  "version": "1.0.0",
+  "description": "Dashboard Quản lý Ngân sách - Beta Solutions",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5",
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  }
+}
